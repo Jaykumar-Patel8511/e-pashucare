@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700;800;900&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  color: #082f49;
+  background: radial-gradient(circle at 15% 20%, #d9f99d 0%, #a7f3d0 20%, rgba(255, 255, 255, 0.9) 45%, #bae6fd 100%);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Epilogue', sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+}
