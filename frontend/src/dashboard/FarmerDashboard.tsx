@@ -6,6 +6,34 @@ import { useLanguage } from "../context/LanguageContext";
 import { useSocket } from "../hooks/useSocket";
 import type { TranslationKey } from "../translations/translations";
 import { api } from "../utils/api";
+import {
+  Box,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  TextField,
+  Button,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  CircularProgress,
+  Alert,
+  Snackbar,
+  Stack,
+  Paper,
+  IconButton,
+  Tooltip,
+  Avatar,
+} from "@mui/material";
+import {
+  AddCircle as AddIcon,
+  MedicalServices as BookIcon,
+  AutoFixHigh as AutoIcon,
+  History as HistoryIcon,
+  Pets as AnimalIcon,
+} from "@mui/icons-material";
 
 type Animal = { _id: string; animalId: string; animalType?: string; type?: string; animalNickname?: string };
 type CaseItem = {
@@ -73,14 +101,18 @@ export function FarmerDashboard() {
   const [animalForm, setAnimalForm] = useState<{ animalId: string; animalType: "" | "Cow" | "Buffalo" }>({ animalId: "", animalType: "" });
   const [caseForm, setCaseForm] = useState({ animalId: "", healthProblem: "" });
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [animalFormError, setAnimalFormError] = useState("");
   const [caseFormError, setCaseFormError] = useState("");
   const [isSavingAnimal, setIsSavingAnimal] = useState(false);
   const [isSubmittingCase, setIsSubmittingCase] = useState(false);
+  const [openSnackbar, setOpenSnackbar] = useState(false);
 
   const selectedAnimal = animals.find((animal) => animal._id === caseForm.animalId);
   const selectedAnimalType = normalizeAnimalType(selectedAnimal?.animalType || selectedAnimal?.type);
   const activeHealthProblems = selectedAnimalType === "Cow" ? COW_PROBLEMS : selectedAnimalType === "Buffalo" ? BUFFALO_PROBLEMS : [];
+
+  const handleCloseSnackbar = () => setOpenSnackbar(false);
 
   function parseApiError(apiError: any, fallback: string) {
     if (Array.isArray(apiError?.response?.data?.errors)) {
@@ -97,6 +129,7 @@ export function FarmerDashboard() {
       setError("");
     } catch (apiError: any) {
       setError(parseApiError(apiError, t("unableLoadDashboardData")));
+      setOpenSnackbar(true);
     }
   }, [t]);
 
@@ -114,6 +147,7 @@ export function FarmerDashboard() {
   async function onAddAnimal(event: FormEvent) {
     event.preventDefault();
     setError("");
+    setSuccess("");
     setAnimalFormError("");
 
     if (!animalForm.animalId.trim()) {
@@ -134,9 +168,12 @@ export function FarmerDashboard() {
         animalType: animalForm.animalType,
       });
       setAnimalForm({ animalId: "", animalType: "" });
+      setSuccess(t("animalSavedSuccessfully"));
+      setOpenSnackbar(true);
       await fetchData();
     } catch (apiError: any) {
       setError(parseApiError(apiError, t("unableSaveAnimal")));
+      setOpenSnackbar(true);
     } finally {
       setIsSavingAnimal(false);
     }
@@ -145,6 +182,7 @@ export function FarmerDashboard() {
   async function onRequestCase(event: FormEvent) {
     event.preventDefault();
     setError("");
+    setSuccess("");
     setCaseFormError("");
 
     if (!caseForm.animalId) {
@@ -165,121 +203,246 @@ export function FarmerDashboard() {
         description: caseForm.healthProblem,
       });
       setCaseForm({ animalId: "", healthProblem: "" });
+      setSuccess(t("caseCreatedSuccessfully"));
+      setOpenSnackbar(true);
       await fetchData();
     } catch (apiError: any) {
       setError(parseApiError(apiError, t("unableCreateCase")));
+      setOpenSnackbar(true);
     } finally {
       setIsSubmittingCase(false);
     }
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-slate-900 transition-all duration-300">{t("farmerDashboardTitle")}</h1>
-      {error ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <form onSubmit={onAddAnimal} className="rounded-2xl border bg-white p-4">
-          <h2 className="mb-3 text-xl font-semibold">{t("addAnimalSectionTitle")}</h2>
-          <div className="mb-2 flex gap-2">
-            <input
-              className="w-full rounded-lg border p-2"
-              placeholder={t("animalId")}
-              value={animalForm.animalId}
-              onChange={(e) => {
-                setAnimalForm((prev) => ({ ...prev, animalId: e.target.value }));
-                setAnimalFormError("");
-              }}
-            />
-            <button
-              type="button"
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
-              onClick={() => {
-                setAnimalForm((prev) => ({ ...prev, animalId: generateAnimalId(prev.animalType) }));
-                setAnimalFormError("");
-              }}
-            >
-              {t("autoGenerate")}
-            </button>
-          </div>
-          <select
-            className="mb-2 w-full rounded-lg border p-2"
-            value={animalForm.animalType}
-            onChange={(e) => {
-              setAnimalForm((prev) => ({ ...prev, animalType: e.target.value as "" | "Cow" | "Buffalo" }));
-              setAnimalFormError("");
-            }}
-          >
-            <option value="">{t("selectAnimalType")}</option>
-            <option value="Cow">{t("animalTypeCow")}</option>
-            <option value="Buffalo">{t("animalTypeBuffalo")}</option>
-          </select>
-          {animalFormError ? <p className="mb-2 text-sm text-rose-600">{animalFormError}</p> : null}
-          <button disabled={isSavingAnimal} className="rounded-lg bg-cyan-600 px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-70">
-            {isSavingAnimal ? t("saving") : t("saveAnimal")}
-          </button>
-        </form>
+    <Box>
+      <Typography variant="h4" sx={{ fontWeight: 800, mb: 4, color: 'text.primary' }}>
+        {t("farmerDashboardTitle")}
+      </Typography>
 
-        <form onSubmit={onRequestCase} className="rounded-2xl border bg-white p-4">
-          <h2 className="mb-3 text-xl font-semibold">{t("bookSickAnimalCase")}</h2>
-          <select
-            className="mb-2 w-full rounded-lg border p-2"
-            value={caseForm.animalId}
-            onChange={(e) => {
-              setCaseForm({ animalId: e.target.value, healthProblem: "" });
-              setCaseFormError("");
-            }}
-          >
-            <option value="">{t("selectAnimal")}</option>
-            {animals.map((animal) => (
-              <option key={animal._id} value={animal._id}>
-                {animal.animalId} - {(normalizeAnimalType(animal.animalType || animal.type) === "Cow" ? t("animalTypeCow") : normalizeAnimalType(animal.animalType || animal.type) === "Buffalo" ? t("animalTypeBuffalo") : t("unknownType"))}
-              </option>
-            ))}
-          </select>
-          <label className="mb-1 block text-sm font-medium text-slate-700">
-            {selectedAnimalType === "Cow"
-              ? t("selectCowHealthProblem")
-              : selectedAnimalType === "Buffalo"
-                ? t("selectBuffaloHealthProblem")
-                : t("selectHealthProblem")}
-          </label>
-          <select
-            className="mb-2 w-full rounded-lg border p-2"
-            value={caseForm.healthProblem}
-            disabled={!selectedAnimalType}
-            onChange={(e) => {
-              setCaseForm((prev) => ({ ...prev, healthProblem: e.target.value }));
-              setCaseFormError("");
-            }}
-          >
-            <option value="">{selectedAnimalType ? t("selectProblem") : t("selectAnimalFirst")}</option>
-            {activeHealthProblems.map((problem) => (
-              <option key={problem.value} value={problem.value}>
-                {t(problem.labelKey)}
-              </option>
-            ))}
-          </select>
-          {caseFormError ? <p className="mb-2 text-sm text-rose-600">{caseFormError}</p> : null}
-          <button disabled={isSubmittingCase} className="rounded-lg bg-emerald-600 px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-70">
-            {isSubmittingCase ? t("submitting") : t("submitCase")}
-          </button>
-        </form>
-      </div>
+      <Grid container spacing={3}>
+        {/* Add Animal Form */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card variant="outlined" sx={{ height: '100%', borderRadius: 4 }}>
+            <CardContent sx={{ p: 3 }}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
+                <AddIcon color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  {t("addAnimalSectionTitle")}
+                </Typography>
+              </Stack>
+              
+              <Box component="form" onSubmit={onAddAnimal}>
+                <Stack spacing={2.5}>
+                  <Stack direction="row" spacing={1}>
+                    <TextField
+                      fullWidth
+                      label={t("animalId")}
+                      value={animalForm.animalId}
+                      onChange={(e) => {
+                        setAnimalForm((prev) => ({ ...prev, animalId: e.target.value }));
+                        setAnimalFormError("");
+                      }}
+                      error={!!animalFormError}
+                    />
+                    <Tooltip title={t("autoGenerate")}>
+                      <IconButton 
+                        color="primary" 
+                        onClick={() => {
+                          setAnimalForm((prev) => ({ ...prev, animalId: generateAnimalId(prev.animalType) }));
+                          setAnimalFormError("");
+                        }}
+                        sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
+                      >
+                        <AutoIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
 
-      <div className="space-y-3">
-        <h2 className="text-xl font-semibold">{t("myCases")}</h2>
-        {cases.map((item) => (
-          <article key={item._id} className="rounded-2xl border bg-white p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-semibold text-slate-800">
-                {item.animalId?.animalId} | {item.problemType} | {t("fee")}: INR {item.fee}
-              </p>
-              <CaseStatusBadge status={item.status} />
-            </div>
-            <p className="mt-2 text-sm text-slate-600">{item.description}</p>
-          </article>
-        ))}
-      </div>
-    </div>
+                  <FormControl fullWidth error={!!animalFormError}>
+                    <InputLabel>{t("selectAnimalType")}</InputLabel>
+                    <Select
+                      value={animalForm.animalType}
+                      label={t("selectAnimalType")}
+                      onChange={(e) => {
+                        setAnimalForm((prev) => ({ ...prev, animalType: e.target.value as "" | "Cow" | "Buffalo" }));
+                        setAnimalFormError("");
+                      }}
+                    >
+                      <MenuItem value="">{t("selectAnimalType")}</MenuItem>
+                      <MenuItem value="Cow">{t("animalTypeCow")}</MenuItem>
+                      <MenuItem value="Buffalo">{t("animalTypeBuffalo")}</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  {animalFormError && (
+                    <Typography variant="caption" color="error">
+                      {animalFormError}
+                    </Typography>
+                  )}
+
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    fullWidth
+                    size="large"
+                    disabled={isSavingAnimal}
+                    startIcon={isSavingAnimal ? <CircularProgress size={20} color="inherit" /> : <AddIcon />}
+                  >
+                    {isSavingAnimal ? t("saving") : t("saveAnimal")}
+                  </Button>
+                </Stack>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Book Case Form */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card variant="outlined" sx={{ height: '100%', borderRadius: 4 }}>
+            <CardContent sx={{ p: 3 }}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
+                <BookIcon color="secondary" />
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  {t("bookSickAnimalCase")}
+                </Typography>
+              </Stack>
+
+              <Box component="form" onSubmit={onRequestCase}>
+                <Stack spacing={2.5}>
+                  <FormControl fullWidth error={!!caseFormError}>
+                    <InputLabel>{t("selectAnimal")}</InputLabel>
+                    <Select
+                      value={caseForm.animalId}
+                      label={t("selectAnimal")}
+                      onChange={(e) => {
+                        setCaseForm({ animalId: e.target.value, healthProblem: "" });
+                        setCaseFormError("");
+                      }}
+                    >
+                      <MenuItem value="">{t("selectAnimal")}</MenuItem>
+                      {animals.map((animal) => (
+                        <MenuItem key={animal._id} value={animal._id}>
+                          {animal.animalId} - {(normalizeAnimalType(animal.animalType || animal.type) === "Cow" ? t("animalTypeCow") : normalizeAnimalType(animal.animalType || animal.type) === "Buffalo" ? t("animalTypeBuffalo") : t("unknownType"))}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl fullWidth disabled={!selectedAnimalType} error={!!caseFormError}>
+                    <InputLabel>
+                      {selectedAnimalType === "Cow"
+                        ? t("selectCowHealthProblem")
+                        : selectedAnimalType === "Buffalo"
+                          ? t("selectBuffaloHealthProblem")
+                          : t("selectHealthProblem")}
+                    </InputLabel>
+                    <Select
+                      value={caseForm.healthProblem}
+                      label={selectedAnimalType === "Cow" ? t("selectCowHealthProblem") : selectedAnimalType === "Buffalo" ? t("selectBuffaloHealthProblem") : t("selectHealthProblem")}
+                      onChange={(e) => {
+                        setCaseForm((prev) => ({ ...prev, healthProblem: e.target.value }));
+                        setCaseFormError("");
+                      }}
+                    >
+                      {activeHealthProblems.map((p) => (
+                        <MenuItem key={p.value} value={p.value}>
+                          {t(p.labelKey)}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  {caseFormError && (
+                    <Typography variant="caption" color="error">
+                      {caseFormError}
+                    </Typography>
+                  )}
+
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="secondary"
+                    fullWidth
+                    size="large"
+                    disabled={isSubmittingCase}
+                    startIcon={isSubmittingCase ? <CircularProgress size={20} color="inherit" /> : <BookIcon />}
+                  >
+                    {isSubmittingCase ? t("submitting") : t("bookCase")}
+                  </Button>
+                </Stack>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* My Cases List */}
+        <Grid size={{ xs: 12 }}>
+          <Box sx={{ mt: 2 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+              <HistoryIcon color="action" />
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                {t("myCasesList")}
+              </Typography>
+            </Stack>
+
+            {cases.length === 0 ? (
+              <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', borderRadius: 4 }}>
+                <Typography color="text.secondary">
+                  {t("noCasesFound")}
+                </Typography>
+              </Paper>
+            ) : (
+              <Grid container spacing={2}>
+                {cases.map((item) => (
+                  <Grid size={{ xs: 12 }} key={item._id}>
+                    <Card variant="outlined" sx={{ borderRadius: 3, transition: 'all 0.2s', '&:hover': { borderColor: 'primary.main', boxShadow: 2 } }}>
+                      <CardContent sx={{ p: 2.5 }}>
+                        <Grid container alignItems="center" spacing={2}>
+                          <Grid size="auto">
+                            <Avatar sx={{ bgcolor: item.problemType === 'emergency' ? 'error.light' : 'info.light', color: item.problemType === 'emergency' ? 'error.main' : 'info.main' }}>
+                              <AnimalIcon />
+                            </Avatar>
+                          </Grid>
+                          <Grid size="grow">
+                            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                              {item.animalId?.animalId || t("unknownAnimal")}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {item.description}
+                            </Typography>
+                          </Grid>
+                          <Grid size="auto">
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textAlign: 'right' }}>
+                              ₹{item.fee}
+                            </Typography>
+                            <CaseStatusBadge status={item.status} />
+                          </Grid>
+                        </Grid>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </Box>
+        </Grid>
+      </Grid>
+
+      <Snackbar 
+        open={openSnackbar} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={error ? "error" : "success"} 
+          sx={{ width: '100%', borderRadius: 3 }}
+        >
+          {error || success}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 }

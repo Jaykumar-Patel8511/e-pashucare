@@ -1,30 +1,179 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
+import {
+  Box,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Typography,
+  IconButton,
+  useMediaQuery,
+  useTheme,
+  Paper,
+  Container,
+} from "@mui/material";
+import {
+  Dashboard as DashboardIcon,
+  Person as PersonIcon,
+  MedicalServices as DoctorIcon,
+  AdminPanelSettings as AdminIcon,
+  Menu as MenuIcon,
+} from "@mui/icons-material";
+import { useState } from "react";
+
+const DRAWER_WIDTH = 280;
 
 export function DashboardLayout() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const translatedRole = user?.role === "farmer" ? t("roleFarmer") : user?.role === "doctor" ? t("roleDoctor") : user?.role === "admin" ? t("roleAdmin") : user?.role;
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
+  const translatedRole = 
+    user?.role === "farmer" ? t("roleFarmer") : 
+    user?.role === "doctor" ? t("roleDoctor") : 
+    user?.role === "admin" ? t("roleAdmin") : user?.role;
+
+  const menuItems = [
+    { text: t("sidebarOverview"), path: "/dashboard", icon: <DashboardIcon /> },
+    ...(user?.role === "farmer" ? [{ text: t("sidebarFarmerPanel"), path: "/dashboard/farmer", icon: <PersonIcon /> }] : []),
+    ...(user?.role === "doctor" ? [{ text: t("sidebarDoctorPanel"), path: "/dashboard/doctor", icon: <DoctorIcon /> }] : []),
+    ...(user?.role === "admin" ? [{ text: t("sidebarAdminPanel"), path: "/dashboard/admin", icon: <AdminIcon /> }] : []),
+  ];
+
+  const drawerContent = (
+    <Box sx={{ p: 3 }}>
+      <Typography 
+        variant="overline" 
+        sx={{ 
+          fontWeight: 700, 
+          color: 'text.secondary',
+          letterSpacing: '1px',
+          mb: 1,
+          display: 'block'
+        }}
+      >
+        {t("sidebarRole")}
+      </Typography>
+      <Typography variant="h5" sx={{ fontWeight: 800, mb: 4, color: 'primary.main' }}>
+        {translatedRole}
+      </Typography>
+      
+      <List sx={{ px: 0 }}>
+        {menuItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
+              <ListItemButton
+                component={Link}
+                to={item.path}
+                onClick={() => isMobile && setMobileOpen(false)}
+                sx={{
+                  borderRadius: 3,
+                  backgroundColor: isActive ? 'primary.main' : 'transparent',
+                  color: isActive ? 'primary.contrastText' : 'text.primary',
+                  '&:hover': {
+                    backgroundColor: isActive ? 'primary.dark' : 'rgba(79, 70, 229, 0.08)',
+                  },
+                  transition: 'all 0.2s',
+                }}
+              >
+                <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={item.text} 
+                  primaryTypographyProps={{ 
+                    fontWeight: isActive ? 600 : 500,
+                    fontSize: '0.95rem'
+                  }} 
+                />
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
+      </List>
+    </Box>
+  );
 
   return (
-    <div className="mx-auto grid min-h-[calc(100vh-80px)] max-w-7xl gap-4 px-4 py-6 md:grid-cols-[260px_1fr] md:px-6">
-      <aside className="rounded-3xl border border-white/40 bg-white/40 p-4 shadow-xl backdrop-blur-xl">
-        <p className="text-xs uppercase tracking-wider text-slate-500">{t("sidebarRole")}</p>
-        <h2 className="mb-4 text-2xl font-bold text-slate-900">{translatedRole}</h2>
-        <nav className="space-y-2">
-          <Link className="block rounded-xl bg-slate-100 px-3 py-2 text-slate-800" to="/dashboard">
-            {t("sidebarOverview")}
-          </Link>
-          {user?.role === "farmer" ? <Link className="block rounded-xl bg-slate-100 px-3 py-2" to="/dashboard/farmer">{t("sidebarFarmerPanel")}</Link> : null}
-          {user?.role === "doctor" ? <Link className="block rounded-xl bg-slate-100 px-3 py-2" to="/dashboard/doctor">{t("sidebarDoctorPanel")}</Link> : null}
-          {user?.role === "admin" ? <Link className="block rounded-xl bg-slate-100 px-3 py-2" to="/dashboard/admin">{t("sidebarAdminPanel")}</Link> : null}
-        </nav>
-      </aside>
-      <section className="rounded-3xl border border-white/40 bg-white/50 p-4 shadow-xl backdrop-blur-xl md:p-6">
-        <Outlet />
-      </section>
-    </div>
+    <Container maxWidth="xl" sx={{ mt: { xs: 2, md: 4 }, mb: 4 }}>
+      {isMobile && (
+        <IconButton
+          color="inherit"
+          aria-label="open drawer"
+          edge="start"
+          onClick={handleDrawerToggle}
+          sx={{ mb: 2, ml: 1, display: { md: 'none' } }}
+        >
+          <MenuIcon />
+        </IconButton>
+      )}
+
+      <Box sx={{ display: 'flex', gap: 3, minHeight: 'calc(100vh - 160px)' }}>
+        {/* Desktop Sidebar */}
+        {!isMobile && (
+          <Paper
+            elevation={0}
+            sx={{
+              width: DRAWER_WIDTH,
+              borderRadius: 4,
+              border: '1px solid',
+              borderColor: 'divider',
+              backgroundColor: 'rgba(255, 255, 255, 0.6)',
+              backdropFilter: 'blur(10px)',
+              flexShrink: 0,
+            }}
+          >
+            {drawerContent}
+          </Paper>
+        )}
+
+        {/* Mobile Sidebar */}
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': { 
+              width: DRAWER_WIDTH,
+              boxSizing: 'border-box',
+              borderRadius: '0 24px 24px 0',
+            },
+          }}
+        >
+          {drawerContent}
+        </Drawer>
+
+        {/* Main Content */}
+        <Paper
+          elevation={0}
+          sx={{
+            flexGrow: 1,
+            borderRadius: 4,
+            border: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            backdropFilter: 'blur(10px)',
+            p: { xs: 2, md: 4 },
+            overflow: 'hidden'
+          }}
+        >
+          <Outlet />
+        </Paper>
+      </Box>
+    </Container>
   );
 }

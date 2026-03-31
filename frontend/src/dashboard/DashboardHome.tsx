@@ -1,6 +1,35 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../utils/api";
+import {
+  Box,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  TextField,
+  Button,
+  Avatar,
+  CircularProgress,
+  Alert,
+  Snackbar,
+  Paper,
+  Stack,
+} from "@mui/material";
+import {
+  Edit as EditIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  Delete as DeleteIcon,
+  Person as PersonIcon,
+  Pets as AnimalIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  Work as WorkIcon,
+  CalendarMonth as CalendarIcon,
+  LocationOn as LocationIcon,
+} from "@mui/icons-material";
 
 type FarmerProfile = {
   farmerId: string;
@@ -93,9 +122,17 @@ export function DashboardHome() {
   const [deletingAnimalId, setDeletingAnimalId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [openSnackbar, setOpenSnackbar] = useState(false);
 
   const isFarmer = user?.role === "farmer";
   const isDoctor = user?.role === "doctor";
+  const isAdmin = user?.role === "admin";
+
+  const handleCloseSnackbar = () => setOpenSnackbar(false);
+
+  useEffect(() => {
+    if (success || error) setOpenSnackbar(true);
+  }, [success, error]);
 
   const bootstrap = useCallback(async () => {
     if (!isFarmer) {
@@ -166,10 +203,10 @@ export function DashboardHome() {
 
   const profileRows = useMemo(
     () => [
-      { label: "Name", value: profile?.name || "-" },
-      { label: "Mobile", value: profile?.mobile || "-" },
-      { label: "Email", value: profile?.email || "-" },
-      { label: "Address", value: profile?.address || "-" },
+      { label: "Name", value: profile?.name || "-", icon: <PersonIcon sx={{ fontSize: 20 }} /> },
+      { label: "Mobile", value: profile?.mobile || "-", icon: <PhoneIcon sx={{ fontSize: 20 }} /> },
+      { label: "Email", value: profile?.email || "-", icon: <EmailIcon sx={{ fontSize: 20 }} /> },
+      { label: "Address", value: profile?.address || "-", icon: <LocationIcon sx={{ fontSize: 20 }} /> },
       { label: "Village", value: profile?.village || "-" },
       { label: "City", value: profile?.city || "-" },
       { label: "District", value: profile?.district || "-" },
@@ -328,272 +365,398 @@ export function DashboardHome() {
     }
   }
 
+  const renderSnackbar = () => (
+    <Snackbar 
+      open={openSnackbar} 
+      autoHideDuration={6000} 
+      onClose={handleCloseSnackbar}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+    >
+      <Alert 
+        onClose={handleCloseSnackbar} 
+        severity={error ? "error" : "success"} 
+        sx={{ width: '100%', borderRadius: 3 }}
+      >
+        {error || success}
+      </Alert>
+    </Snackbar>
+  );
+
+  if (isAdmin) {
+    return (
+      <Box sx={{ py: 4, textAlign: 'center' }}>
+        <Typography variant="h4" sx={{ fontWeight: 800, mb: 2, color: 'primary.main' }}>
+          Welcome, Administrator
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+          Access the Admin Panel from the sidebar to manage cases and doctors.
+        </Typography>
+        <Button
+          component={Link}
+          to="/dashboard/admin"
+          variant="contained"
+          size="large"
+          sx={{ borderRadius: 3, px: 4 }}
+        >
+          Go to Admin Panel
+        </Button>
+      </Box>
+    );
+  }
+
   if (isDoctor) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Doctor Overview</h1>
-          <p className="mt-2 text-slate-700">View and manage your registration profile details.</p>
-        </div>
+      <Box sx={{ spaceY: 4 }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" sx={{ fontWeight: 800, color: 'text.primary' }}>
+            Doctor Overview
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            View and manage your registration profile details.
+          </Typography>
+        </Box>
 
-        {isLoading ? <p className="text-sm text-slate-600">Loading overview...</p> : null}
-        {error ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
-        {success ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</p> : null}
+        {isLoading && <CircularProgress size={24} sx={{ mb: 2 }} />}
 
-        <section className="rounded-2xl border bg-white p-4">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-xl font-semibold text-slate-900">Doctor Profile</h2>
-            {isEditingDoctorProfile ? (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (doctorProfile) {
-                      setDoctorForm({
-                        doctorName: doctorProfile.doctorName || "",
-                        doctorId: doctorProfile.doctorId || "",
-                        email: doctorProfile.email || "",
-                        phone: doctorProfile.phone || "",
-                        specialization: doctorProfile.specialization || "",
-                      });
-                    }
-                    setIsEditingDoctorProfile(false);
-                  }}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
+        <Card variant="outlined" sx={{ borderRadius: 4, overflow: 'visible' }}>
+          <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                Doctor Profile
+              </Typography>
+              {isEditingDoctorProfile ? (
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<CancelIcon />}
+                    onClick={() => {
+                      if (doctorProfile) {
+                        setDoctorForm({
+                          doctorName: doctorProfile.doctorName || "",
+                          doctorId: doctorProfile.doctorId || "",
+                          email: doctorProfile.email || "",
+                          phone: doctorProfile.phone || "",
+                          specialization: doctorProfile.specialization || "",
+                        });
+                      }
+                      setIsEditingDoctorProfile(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={isSavingDoctorProfile ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                    onClick={saveDoctorProfile}
+                    disabled={isSavingDoctorProfile}
+                  >
+                    Save Changes
+                  </Button>
+                </Stack>
+              ) : (
+                <Button
+                  variant="contained"
+                  startIcon={<EditIcon />}
+                  onClick={() => setIsEditingDoctorProfile(true)}
                 >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={saveDoctorProfile}
-                  disabled={isSavingDoctorProfile}
-                  className="rounded-lg bg-cyan-600 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {isSavingDoctorProfile ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsEditingDoctorProfile(true)}
-                className="rounded-lg bg-slate-900 px-3 py-2 text-sm text-white"
-              >
-                Edit Profile
-              </button>
-            )}
-          </div>
+                  Edit Profile
+                </Button>
+              )}
+            </Box>
 
-          {isEditingDoctorProfile ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              <input
-                className="rounded-lg border p-2"
-                placeholder="Doctor Name"
-                value={doctorForm.doctorName}
-                onChange={(e) => setDoctorForm((prev) => ({ ...prev, doctorName: e.target.value }))}
-              />
-              <input className="rounded-lg border bg-slate-100 p-2 text-slate-600" value={doctorForm.doctorId} readOnly />
-              <input className="rounded-lg border p-2" placeholder="Email ID" value={doctorForm.email} onChange={(e) => setDoctorForm((prev) => ({ ...prev, email: e.target.value }))} />
-              <input className="rounded-lg border p-2" placeholder="Phone Number" value={doctorForm.phone} onChange={(e) => setDoctorForm((prev) => ({ ...prev, phone: e.target.value }))} />
-              <input
-                className="rounded-lg border p-2 md:col-span-2"
-                placeholder="Specialization"
-                value={doctorForm.specialization}
-                onChange={(e) => setDoctorForm((prev) => ({ ...prev, specialization: e.target.value }))}
-              />
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Doctor Name</p>
-                <p className="mt-1 text-slate-900">{doctorProfile?.doctorName || "-"}</p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Doctor ID</p>
-                <p className="mt-1 text-slate-900">{doctorProfile?.doctorId || "-"}</p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email ID</p>
-                <p className="mt-1 text-slate-900">{doctorProfile?.email || "-"}</p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Phone Number</p>
-                <p className="mt-1 text-slate-900">{doctorProfile?.phone || "-"}</p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Specialization</p>
-                <p className="mt-1 text-slate-900">{doctorProfile?.specialization || "-"}</p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Registered On</p>
-                <p className="mt-1 text-slate-900">
-                  {doctorProfile?.createdAt
-                    ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(doctorProfile.createdAt))
-                    : "-"}
-                </p>
-              </div>
-            </div>
-          )}
-        </section>
-      </div>
+            <Grid container spacing={2}>
+              {isEditingDoctorProfile ? (
+                <>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      label="Doctor Name"
+                      value={doctorForm.doctorName}
+                      onChange={(e) => setDoctorForm((prev) => ({ ...prev, doctorName: e.target.value }))}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      label="Doctor ID"
+                      value={doctorForm.doctorId}
+                      disabled
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      label="Email ID"
+                      value={doctorForm.email}
+                      onChange={(e) => setDoctorForm((prev) => ({ ...prev, email: e.target.value }))}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      label="Phone Number"
+                      value={doctorForm.phone}
+                      onChange={(e) => setDoctorForm((prev) => ({ ...prev, phone: e.target.value }))}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <TextField
+                      label="Specialization"
+                      value={doctorForm.specialization}
+                      onChange={(e) => setDoctorForm((prev) => ({ ...prev, specialization: e.target.value }))}
+                    />
+                  </Grid>
+                </>
+              ) : (
+                <>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <ProfileItem label="Doctor Name" value={doctorProfile?.doctorName} icon={<PersonIcon fontSize="small" />} />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <ProfileItem label="Doctor ID" value={doctorProfile?.doctorId} icon={<WorkIcon fontSize="small" />} />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <ProfileItem label="Email ID" value={doctorProfile?.email} icon={<EmailIcon fontSize="small" />} />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <ProfileItem label="Phone Number" value={doctorProfile?.phone} icon={<PhoneIcon fontSize="small" />} />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <ProfileItem label="Specialization" value={doctorProfile?.specialization} icon={<WorkIcon fontSize="small" />} />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <ProfileItem 
+                      label="Registered On" 
+                      value={doctorProfile?.createdAt ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(doctorProfile.createdAt)) : "-"} 
+                      icon={<CalendarIcon fontSize="small" />} 
+                    />
+                  </Grid>
+                </>
+              )}
+            </Grid>
+          </CardContent>
+        </Card>
+        {renderSnackbar()}
+      </Box>
     );
   }
 
   if (!isFarmer) {
     return (
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Welcome, {user?.name}</h1>
-        <p className="mt-2 text-slate-700">Use the sidebar to access your role-specific tools.</p>
-      </div>
+      <Box sx={{ py: 4, textAlign: 'center' }}>
+        <Typography variant="h3" sx={{ fontWeight: 800, mb: 2 }}>
+          Welcome, {user?.name}
+        </Typography>
+        <Typography variant="h6" color="text.secondary">
+          Use the sidebar to access your role-specific tools.
+        </Typography>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Farmer Overview</h1>
-        <p className="mt-2 text-slate-700">View and manage your profile and registered animals.</p>
-      </div>
+    <Box sx={{ spaceY: 4 }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" sx={{ fontWeight: 800, color: 'text.primary' }}>
+          Farmer Overview
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          View and manage your profile and registered animals.
+        </Typography>
+      </Box>
 
-      {isLoading ? <p className="text-sm text-slate-600">Loading overview...</p> : null}
-      {error ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
-      {success ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</p> : null}
+      {isLoading && <CircularProgress size={24} sx={{ mb: 2 }} />}
 
-      <section className="rounded-2xl border bg-white p-4">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-xl font-semibold text-slate-900">Farmer Registration Details</h2>
-          {isEditingProfile ? (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (profile) {
-                    setProfileForm(toProfileForm(profile));
-                  }
-                  setIsEditingProfile(false);
-                }}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={saveProfile}
-                disabled={isSavingProfile}
-                className="rounded-lg bg-cyan-600 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isSavingProfile ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setIsEditingProfile(true)}
-              className="rounded-lg bg-slate-900 px-3 py-2 text-sm text-white"
-            >
-              Edit Profile
-            </button>
-          )}
-        </div>
-
-        {isEditingProfile ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            <input className="rounded-lg border p-2" placeholder="Name" value={profileForm.name} onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))} />
-            <input className="rounded-lg border p-2" placeholder="Mobile" value={profileForm.mobile} onChange={(e) => setProfileForm((prev) => ({ ...prev, mobile: e.target.value }))} />
-            <input className="rounded-lg border p-2" placeholder="Email" value={profileForm.email} onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))} />
-            <input className="rounded-lg border p-2" placeholder="Address" value={profileForm.address} onChange={(e) => setProfileForm((prev) => ({ ...prev, address: e.target.value }))} />
-            <input className="rounded-lg border p-2" placeholder="Village" value={profileForm.village} onChange={(e) => setProfileForm((prev) => ({ ...prev, village: e.target.value }))} />
-            <input className="rounded-lg border p-2" placeholder="City" value={profileForm.city} onChange={(e) => setProfileForm((prev) => ({ ...prev, city: e.target.value }))} />
-            <input className="rounded-lg border p-2" placeholder="District" value={profileForm.district} onChange={(e) => setProfileForm((prev) => ({ ...prev, district: e.target.value }))} />
-            <input className="rounded-lg border p-2" placeholder="State" value={profileForm.state} onChange={(e) => setProfileForm((prev) => ({ ...prev, state: e.target.value }))} />
-            <input className="rounded-lg border p-2" placeholder="Pincode" value={profileForm.pincode} onChange={(e) => setProfileForm((prev) => ({ ...prev, pincode: e.target.value }))} />
-            <input className="rounded-lg border p-2" placeholder="Latitude" value={profileForm.latitude} onChange={(e) => setProfileForm((prev) => ({ ...prev, latitude: e.target.value }))} />
-            <input className="rounded-lg border p-2" placeholder="Longitude" value={profileForm.longitude} onChange={(e) => setProfileForm((prev) => ({ ...prev, longitude: e.target.value }))} />
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2">
-            {profileRows.map((item) => (
-              <div key={item.label} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{item.label}</p>
-                <p className="mt-1 text-slate-900">{item.value}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold text-slate-900">My Animals</h2>
-        {animals.length === 0 ? <p className="text-sm text-slate-600">No animals found. Add one from Farmer Panel.</p> : null}
-
-        {animals.map((animal) => {
-          const draft = animalDrafts[animal._id] || {
-            animalType: String(animal.animalType || animal.type || "").trim(),
-            animalNickname: String(animal.animalNickname || "").trim(),
-            healthHistory: String(animal.healthHistory || ""),
-          };
-
-          return (
-            <article key={animal._id} className="rounded-2xl border bg-white p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="font-semibold text-slate-900">Animal ID: {animal.animalId}</p>
-                <button
-                  type="button"
-                  onClick={() => removeAnimal(animal._id)}
-                  disabled={deletingAnimalId === animal._id}
-                  className="rounded-lg bg-rose-600 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-70"
+      <Card variant="outlined" sx={{ borderRadius: 4, mb: 4 }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              Farmer Registration Details
+            </Typography>
+            {isEditingProfile ? (
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  startIcon={<CancelIcon />}
+                  onClick={() => {
+                    if (profile) setProfileForm(toProfileForm(profile));
+                    setIsEditingProfile(false);
+                  }}
                 >
-                  {deletingAnimalId === animal._id ? "Deleting..." : "Delete"}
-                </button>
-              </div>
-
-              <div className="grid gap-2 md:grid-cols-2">
-                <input
-                  className="rounded-lg border p-2"
-                  placeholder="Animal Type"
-                  value={draft.animalType}
-                  onChange={(e) =>
-                    setAnimalDrafts((prev) => ({
-                      ...prev,
-                      [animal._id]: { ...draft, animalType: e.target.value },
-                    }))
-                  }
-                />
-                <input
-                  className="rounded-lg border p-2"
-                  placeholder="Animal Nickname"
-                  value={draft.animalNickname}
-                  onChange={(e) =>
-                    setAnimalDrafts((prev) => ({
-                      ...prev,
-                      [animal._id]: { ...draft, animalNickname: e.target.value },
-                    }))
-                  }
-                />
-              </div>
-              <textarea
-                className="mt-2 w-full rounded-lg border p-2"
-                placeholder="Health History"
-                value={draft.healthHistory}
-                onChange={(e) =>
-                  setAnimalDrafts((prev) => ({
-                    ...prev,
-                    [animal._id]: { ...draft, healthHistory: e.target.value },
-                  }))
-                }
-              />
-
-              <button
-                type="button"
-                onClick={() => saveAnimal(animal._id)}
-                disabled={savingAnimalId === animal._id}
-                className="mt-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-70"
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={isSavingProfile ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                  onClick={saveProfile}
+                  disabled={isSavingProfile}
+                >
+                  Save Changes
+                </Button>
+              </Stack>
+            ) : (
+              <Button
+                variant="contained"
+                startIcon={<EditIcon />}
+                onClick={() => setIsEditingProfile(true)}
               >
-                {savingAnimalId === animal._id ? "Saving..." : "Save Animal"}
-              </button>
-            </article>
-          );
-        })}
-      </section>
-    </div>
+                Edit Profile
+              </Button>
+            )}
+          </Box>
+
+          <Grid container spacing={2}>
+            {isEditingProfile ? (
+              Object.keys(profileForm).map((key) => (
+                <Grid size={{ xs: 12, md: key === 'address' ? 12 : 6 }} key={key}>
+                  <TextField
+                    label={key.charAt(0).toUpperCase() + key.slice(1)}
+                    value={profileForm[key as keyof typeof profileForm]}
+                    onChange={(e) => setProfileForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                  />
+                </Grid>
+              ))
+            ) : (
+              profileRows.map((item) => (
+                <Grid size={{ xs: 12, md: 6 }} key={item.label}>
+                  <ProfileItem label={item.label} value={item.value} icon={item.icon} />
+                </Grid>
+              ))
+            )}
+          </Grid>
+        </CardContent>
+      </Card>
+
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
+          My Animals
+        </Typography>
+        {animals.length === 0 && (
+          <Alert severity="info" sx={{ borderRadius: 3 }}>
+            No animals found. Add one from Farmer Panel.
+          </Alert>
+        )}
+
+        <Grid container spacing={3}>
+          {animals.map((animal) => {
+            const draft = animalDrafts[animal._id] || {
+              animalType: String(animal.animalType || animal.type || "").trim(),
+              animalNickname: String(animal.animalNickname || "").trim(),
+              healthHistory: String(animal.healthHistory || ""),
+            };
+
+            return (
+              <Grid size={{ xs: 12 }} key={animal._id}>
+                <Card variant="outlined" sx={{ borderRadius: 4 }}>
+                  <CardContent sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar sx={{ bgcolor: 'secondary.light', color: 'secondary.main' }}>
+                          <AnimalIcon />
+                        </Avatar>
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                          Animal ID: {animal.animalId}
+                        </Typography>
+                      </Box>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={deletingAnimalId === animal._id ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
+                        onClick={() => removeAnimal(animal._id)}
+                        disabled={deletingAnimalId === animal._id}
+                        size="small"
+                      >
+                        Delete
+                      </Button>
+                    </Box>
+
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          label="Animal Type"
+                          value={draft.animalType}
+                          onChange={(e) =>
+                            setAnimalDrafts((prev) => ({
+                              ...prev,
+                              [animal._id]: { ...draft, animalType: e.target.value },
+                            }))
+                          }
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          label="Animal Nickname"
+                          value={draft.animalNickname}
+                          onChange={(e) =>
+                            setAnimalDrafts((prev) => ({
+                              ...prev,
+                              [animal._id]: { ...draft, animalNickname: e.target.value },
+                            }))
+                          }
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12 }}>
+                        <TextField
+                          label="Health History"
+                          multiline
+                          rows={3}
+                          value={draft.healthHistory}
+                          onChange={(e) =>
+                            setAnimalDrafts((prev) => ({
+                              ...prev,
+                              [animal._id]: { ...draft, healthHistory: e.target.value },
+                            }))
+                          }
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12 }}>
+                        <Button
+                          variant="contained"
+                          color="secondary"
+                          startIcon={savingAnimalId === animal._id ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                          onClick={() => saveAnimal(animal._id)}
+                          disabled={savingAnimalId === animal._id}
+                        >
+                          Save Animal
+                        </Button>
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </Box>
+      {renderSnackbar()}
+    </Box>
+  );
+}
+
+function ProfileItem({ label, value, icon }: { label: string; value: any; icon?: React.ReactNode }) {
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        p: 2,
+        borderRadius: 3,
+        backgroundColor: 'rgba(248, 250, 252, 0.8)',
+        border: '1px solid',
+        borderColor: 'divider',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 2,
+      }}
+    >
+      {icon && (
+        <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.light', color: 'primary.main' }}>
+          {icon}
+        </Avatar>
+      )}
+      <Box>
+        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          {label}
+        </Typography>
+        <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
+          {value || "-"}
+        </Typography>
+      </Box>
+    </Paper>
   );
 }

@@ -1,14 +1,24 @@
-const statusColorMap: Record<string, string> = {
-  Pending: "bg-amber-200 text-amber-900",
-  Assigned: "bg-sky-200 text-sky-900",
-  "Doctor On The Way": "bg-indigo-200 text-indigo-900",
-  "Treatment Completed": "bg-emerald-200 text-emerald-900",
+import { Chip } from "@mui/material";
+
+const statusColorMap: Record<string, "warning" | "info" | "primary" | "success" | "default" | "error"> = {
+  Pending: "warning",
+  Assigned: "info",
+  "Doctor On The Way": "primary",
+  "Treatment Completed": "success",
+  Emergency: "error",
 };
 
 export function CaseStatusBadge({ status }: { status: string }) {
   return (
-    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColorMap[status] || "bg-slate-200 text-slate-800"}`}>
-      {status}
-    </span>
+    <Chip
+      label={status}
+      color={statusColorMap[status] || "default"}
+      size="small"
+      sx={{ 
+        fontWeight: 600,
+        borderRadius: '8px',
+        px: 1
+      }}
+    />
   );
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Chart as ChartJS,
   ArcElement,
@@ -7,15 +7,48 @@ import {
   PointElement,
   LineElement,
   Title,
-  Tooltip,
+  Tooltip as ChartTooltip,
   Legend,
 } from "chart.js";
 import { Doughnut, Line } from "react-chartjs-2";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../hooks/useSocket";
 import { api } from "../utils/api";
+import {
+  Box,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  Select,
+  MenuItem,
+  FormControl,
+  CircularProgress,
+  Alert,
+  Snackbar,
+  Stack,
+  Divider,
+  Chip,
+  Avatar,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Tooltip,
+} from "@mui/material";
+import {
+  MedicalServices as DoctorIcon,
+  Assignment as CaseIcon,
+  TrendingUp as TrendIcon,
+  LocationOn as LocationIcon,
+  Emergency as EmergencyIcon,
+  Person as PersonIcon,
+} from "@mui/icons-material";
 
-ChartJS.register(ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+ChartJS.register(ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Title, ChartTooltip, Legend);
 
 type Analytics = {
   totalCases: number;
@@ -78,15 +111,14 @@ export function AdminDashboard() {
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  function parseApiError(apiError: any, fallback: string) {
-    if (Array.isArray(apiError?.response?.data?.errors)) {
-      return apiError.response.data.errors.map((item: { msg?: string }) => item.msg).join(", ");
-    }
-    return apiError?.response?.data?.message || apiError?.message || fallback;
-  }
+  const handleCloseSnackbar = () => setOpenSnackbar(false);
 
   const fetchData = useCallback(async () => {
+    setIsLoading(true);
     try {
       const [analyticsRes, casesRes, doctorsRes] = await Promise.all([
         api.get("/admin/analytics"),
@@ -98,7 +130,10 @@ export function AdminDashboard() {
       setDoctors(doctorsRes.data);
       setError("");
     } catch (apiError: any) {
-      setError(parseApiError(apiError, "Unable to load admin dashboard data."));
+      setError("Unable to load admin dashboard data.");
+      setOpenSnackbar(true);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -117,9 +152,12 @@ export function AdminDashboard() {
   async function assignDoctor(caseId: string, doctorId: string) {
     try {
       await api.patch(`/cases/${caseId}/assign`, { doctorId });
+      setSuccess("Doctor assigned successfully!");
+      setOpenSnackbar(true);
       await fetchData();
     } catch (apiError: any) {
-      setError(parseApiError(apiError, "Unable to assign doctor to case."));
+      setError("Unable to assign doctor to case.");
+      setOpenSnackbar(true);
     }
   }
 
@@ -129,7 +167,9 @@ export function AdminDashboard() {
       datasets: [
         {
           data: analytics ? [analytics.emergencyCases, analytics.totalCases - analytics.emergencyCases] : [0, 0],
-          backgroundColor: ["#ef4444", "#0ea5e9"],
+          backgroundColor: ["#F43F5E", "#3B82F6"],
+          borderWidth: 0,
+          hoverOffset: 10,
         },
       ],
     }),
@@ -143,8 +183,12 @@ export function AdminDashboard() {
         {
           label: "Daily Cases",
           data: analytics?.dailyCaseTrends.map((item) => item.count) || [],
-          borderColor: "#059669",
-          backgroundColor: "rgba(5, 150, 105, 0.2)",
+          borderColor: "#4F46E5",
+          backgroundColor: "rgba(79, 70, 229, 0.1)",
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+          pointBackgroundColor: "#4F46E5",
         },
       ],
     }),
@@ -152,89 +196,283 @@ export function AdminDashboard() {
   );
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
-      {error ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border bg-white p-4">
-          <h2 className="mb-3 font-semibold">Emergency Split</h2>
-          <Doughnut data={donutData} />
-        </div>
-        <div className="rounded-2xl border bg-white p-4">
-          <h2 className="mb-3 font-semibold">Daily Case Trend</h2>
-          <Line data={lineData} />
-        </div>
-      </div>
+    <Box>
+      <Typography variant="h4" sx={{ fontWeight: 800, mb: 4, color: 'text.primary' }}>
+        Admin Dashboard
+      </Typography>
 
-      <div className="rounded-2xl border bg-white p-4">
-        <h2 className="mb-3 text-xl font-semibold">Doctor Workload</h2>
-        <div className="grid gap-3 md:grid-cols-2">
-          {analytics?.doctorWorkload.map((entry, index) => (
-            <article key={`${entry.doctorId}-${index}`} className="rounded-xl bg-slate-100 p-3">
-              <p className="font-semibold">{entry.name}</p>
-              <p className="text-sm text-slate-600">Assigned cases: {entry.cases}</p>
-            </article>
-          ))}
-        </div>
-      </div>
+      {isLoading && <CircularProgress sx={{ mb: 2 }} />}
 
-      <div className="rounded-2xl border bg-white p-4">
-        <h2 className="mb-3 text-xl font-semibold">Manual Doctor Assignment</h2>
-        <div className="space-y-3">
-          {cases.map((item, caseIndex) => (
-            <div key={`${item._id}-${caseIndex}`} className="rounded-xl bg-slate-100 p-3">
-              <p className="text-sm font-semibold text-slate-900">{item.caseId}</p>
-              <p className="mt-1 text-sm text-slate-700">Farmer: {item.farmerName || "Unknown Farmer"}</p>
-              <p className="mt-1 text-sm text-slate-700">Problem: {item.problem || item.problemType || "Unknown"}</p>
-              <p className="mt-1 text-sm text-slate-700">Status: {item.status}</p>
-              <p className="mb-2 mt-1 text-sm text-slate-700">Formal location: {item.formalLocationText || "Location unavailable"}</p>
-              <select
-                defaultValue={typeof item.doctorId === "string" ? item.doctorId : item.doctorId?._id || ""}
-                onChange={(event) => {
-                  const selectedDoctorId = event.target.value;
-                  if (!selectedDoctorId) {
-                    return;
-                  }
-                  assignDoctor(item._id, selectedDoctorId);
-                }}
-                className="w-full rounded-lg border bg-white p-2"
-              >
-                <option value="">Select doctor</option>
-                {doctors.map((doctor, doctorIndex) => (
-                  <option key={`${doctor._id}-${doctorIndex}`} value={doctor._id}>
-                    {doctor.name} ({doctor.specialization})
-                  </option>
+      <Grid container spacing={3}>
+        {/* Stats Summary */}
+        <Grid size={{ xs: 12, md: 3 }}>
+          <StatsCard 
+            title="Total Cases" 
+            value={analytics?.totalCases || 0} 
+            icon={<CaseIcon />} 
+            color="primary.main" 
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <StatsCard 
+            title="Emergency" 
+            value={analytics?.emergencyCases || 0} 
+            icon={<EmergencyIcon />} 
+            color="error.main" 
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <StatsCard 
+            title="Total Doctors" 
+            value={doctors.length} 
+            icon={<DoctorIcon />} 
+            color="success.main" 
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <StatsCard 
+            title="Active Trends" 
+            value={analytics?.dailyCaseTrends.length || 0} 
+            icon={<TrendIcon />} 
+            color="warning.main" 
+          />
+        </Grid>
+
+        {/* Charts */}
+        <Grid size={{ xs: 12, md: 5 }}>
+          <Card variant="outlined" sx={{ borderRadius: 4, height: '100%' }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
+                Case Distribution
+              </Typography>
+              <Box sx={{ height: 300, display: 'flex', justifyContent: 'center' }}>
+                <Doughnut 
+                  data={donutData} 
+                  options={{ 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } } 
+                  }} 
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 7 }}>
+          <Card variant="outlined" sx={{ borderRadius: 4, height: '100%' }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
+                Daily Case Trends
+              </Typography>
+              <Box sx={{ height: 300 }}>
+                <Line 
+                  data={lineData} 
+                  options={{ 
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { legend: { display: false } }
+                  }} 
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Doctor Workload */}
+        <Grid size={{ xs: 12 }}>
+          <Card variant="outlined" sx={{ borderRadius: 4 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
+                Doctor Workload Overview
+              </Typography>
+              <Grid container spacing={2}>
+                {analytics?.doctorWorkload.map((entry, index) => (
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }} key={`${entry.doctorId}-${index}`}>
+                    <Paper 
+                      elevation={0} 
+                      sx={{ 
+                        p: 2, 
+                        borderRadius: 3, 
+                        bgcolor: 'rgba(79, 70, 229, 0.05)',
+                        border: '1px solid',
+                        borderColor: 'primary.light'
+                      }}
+                    >
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Avatar sx={{ bgcolor: 'primary.main' }}>
+                          <PersonIcon />
+                        </Avatar>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                            {entry.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {entry.cases} Cases Assigned
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Paper>
+                  </Grid>
                 ))}
-              </select>
-            </div>
-          ))}
-        </div>
-      </div>
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
 
-      <div className="rounded-2xl border bg-white p-4">
-        <h2 className="mb-3 text-xl font-semibold">All Doctor Locations</h2>
-        <div className="grid gap-3 md:grid-cols-2">
-          {doctors.map((doctor, doctorIndex) => {
-            const hasLocation =
-              typeof doctor.currentLatitude === "number" && typeof doctor.currentLongitude === "number";
+        {/* Case Management Table */}
+        <Grid size={{ xs: 12 }}>
+          <Card variant="outlined" sx={{ borderRadius: 4 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
+                Case Assignment Management
+              </Typography>
+              <TableContainer component={Box}>
+                <Table sx={{ minWidth: 650 }}>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: 'background.default' }}>
+                      <TableCell sx={{ fontWeight: 700 }}>Case ID</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Farmer</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Problem</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Assign Doctor</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {cases.map((item, index) => (
+                      <TableRow key={`${item._id}-${index}`} hover>
+                        <TableCell sx={{ fontWeight: 600 }}>{item.caseId}</TableCell>
+                        <TableCell>{item.farmerName}</TableCell>
+                        <TableCell>
+                          <Tooltip title={item.formalLocationText || ""}>
+                            <Typography variant="body2">{item.problem}</Typography>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={item.status} 
+                            size="small" 
+                            color={item.status === 'Assigned' ? 'info' : item.status === 'Pending' ? 'warning' : 'success'} 
+                            sx={{ fontWeight: 600, borderRadius: 1 }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <FormControl size="small" fullWidth sx={{ minWidth: 200 }}>
+                            <Select
+                              value={typeof item.doctorId === "string" ? item.doctorId : item.doctorId?._id || ""}
+                              displayEmpty
+                              onChange={(e) => assignDoctor(item._id, e.target.value as string)}
+                              sx={{ borderRadius: 2 }}
+                            >
+                              <MenuItem value=""><em>Select doctor</em></MenuItem>
+                              {doctors.map((doctor) => (
+                                <MenuItem key={doctor._id} value={doctor._id}>
+                                  {doctor.name} ({doctor.specialization})
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
 
-            return (
-              <article key={`${doctor._id}-${doctorIndex}`} className="rounded-xl bg-slate-100 p-3">
-                <p className="font-semibold text-slate-900">{doctor.name}</p>
-                <p className="text-sm text-slate-600">Doctor ID: {doctor.doctorId || "N/A"}</p>
-                <p className="text-sm text-slate-600">Specialization: {doctor.specialization}</p>
-                <p className="text-sm text-slate-600">Availability: {doctor.availabilityStatus || (doctor.isAvailable ? "Available" : "Unavailable")}</p>
-                <p className="text-sm text-slate-600">
-                  Live location: {hasLocation ? `${doctor.currentLatitude?.toFixed(5)}, ${doctor.currentLongitude?.toFixed(5)}` : "Location unavailable"}
-                </p>
-                <p className="text-sm text-slate-600">
-                  Last update: {doctor.lastLocationUpdate ? new Date(doctor.lastLocationUpdate).toLocaleString() : "Not available"}
-                </p>
-              </article>
-            );
-          })}
-        </div>
-      </div>
-    </div>
+        {/* Doctor Status List */}
+        <Grid size={{ xs: 12 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+            Doctor Status & Locations
+          </Typography>
+          <Grid container spacing={2}>
+            {doctors.map((doctor, index) => (
+              <Grid size={{ xs: 12, md: 4 }} key={`${doctor._id}-${index}`}>
+                <Card variant="outlined" sx={{ borderRadius: 4 }}>
+                  <CardContent>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                      <Avatar sx={{ bgcolor: doctor.isAvailable ? 'success.main' : 'warning.main' }}>
+                        <DoctorIcon />
+                      </Avatar>
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                          {doctor.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {doctor.specialization}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flexGrow: 1 }} />
+                      <Chip 
+                        label={doctor.availabilityStatus || (doctor.isAvailable ? "Available" : "Busy")} 
+                        size="small" 
+                        color={doctor.isAvailable ? "success" : "warning"}
+                        variant="outlined"
+                      />
+                    </Stack>
+                    
+                    <Divider sx={{ my: 1.5 }} />
+                    
+                    <Stack spacing={1}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LocationIcon fontSize="inherit" color="action" />
+                        <Typography variant="caption" color="text.secondary">
+                          {doctor.currentLatitude ? `${doctor.currentLatitude.toFixed(4)}, ${doctor.currentLongitude?.toFixed(4)}` : "No location"}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TrendIcon fontSize="inherit" color="action" />
+                        <Typography variant="caption" color="text.secondary">
+                          Updated: {doctor.lastLocationUpdate ? new Date(doctor.lastLocationUpdate).toLocaleTimeString() : "Never"}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Grid>
+      </Grid>
+
+      <Snackbar 
+        open={openSnackbar} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={error ? "error" : "success"} 
+          sx={{ width: '100%', borderRadius: 3 }}
+        >
+          {error || success}
+        </Alert>
+      </Snackbar>
+    </Box>
+  );
+}
+
+function StatsCard({ title, value, icon, color }: { title: string; value: number | string; icon: React.ReactNode; color: string }) {
+  return (
+    <Card variant="outlined" sx={{ borderRadius: 4, position: 'relative', overflow: 'hidden' }}>
+      <CardContent>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase' }}>
+              {title}
+            </Typography>
+            <Typography variant="h4" sx={{ fontWeight: 800, mt: 0.5 }}>
+              {value}
+            </Typography>
+          </Box>
+          <Avatar sx={{ bgcolor: color, width: 48, height: 48 }}>
+            {icon}
+          </Avatar>
+        </Stack>
+      </CardContent>
+      <Box sx={{ height: 4, bgcolor: color, position: 'absolute', bottom: 0, left: 0, right: 0 }} />
+    </Card>
   );
 }

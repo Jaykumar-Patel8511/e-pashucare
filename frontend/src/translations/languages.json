@@ -77,7 +77,13 @@
     "problemSkinDisease": "Skin Disease",
     "problemWeakness": "Weakness",
     "problemDigestionProblem": "Digestion Problem",
-    "problemCalvingIssues": "Calving Issues"
+    "problemCalvingIssues": "Calving Issues",
+    "animalSavedSuccessfully": "Animal saved successfully",
+    "caseCreatedSuccessfully": "Case created successfully",
+    "bookCase": "Book Case",
+    "myCasesList": "My Cases List",
+    "noCasesFound": "No cases found",
+    "unknownAnimal": "Unknown Animal"
   },
   "gu": {
     "brand": "ઇ-પશુકેર",
@@ -157,6 +163,12 @@
     "problemSkinDisease": "ચામડી રોગ",
     "problemWeakness": "નબળાઈ",
     "problemDigestionProblem": "પાચન સમસ્યા",
-    "problemCalvingIssues": "પ્રસૂતિ સમસ્યા"
+    "problemCalvingIssues": "પ્રસૂતિ સમસ્યા",
+    "animalSavedSuccessfully": "પ્રાણી સફળતાપૂર્વક સેવ થયું",
+    "caseCreatedSuccessfully": "કેસ સફળતાપૂર્વક નોંધાયો",
+    "bookCase": "કેસ બુક કરો",
+    "myCasesList": "મારા કેસની યાદી",
+    "noCasesFound": "કોઈ કેસ મળ્યા નથી",
+    "unknownAnimal": "અજ્ઞાત પ્રાણી"
   }
 }
